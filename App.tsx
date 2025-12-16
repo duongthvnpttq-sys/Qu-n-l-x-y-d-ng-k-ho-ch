@@ -118,4 +118,4 @@ const App: React.FC = () => {
   );
 };
 
-src/App.tsx
+export default App;
