@@ -4,9 +4,9 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   build: {
+    // 1. Chia nhỏ code (Manual Chunks) để giảm tải dung lượng file đơn lẻ
     rollupOptions: {
       output: {
-        // Tự động tách các thư viện nặng (như jspdf, recharts) thành file riêng
         manualChunks(id) {
           if (id.includes('node_modules')) {
             return id.toString().split('node_modules/')[1].split('/')[0].toString();
@@ -14,6 +14,7 @@ export default defineConfig({
         },
       },
     },
-    chunkSizeWarningLimit: 1500, // Tăng giới hạn cảnh báo
+    // 2. Điều chỉnh giới hạn cảnh báo kích thước khối (đơn vị: kB)
+    chunkSizeWarningLimit: 2000, 
   },
 });
