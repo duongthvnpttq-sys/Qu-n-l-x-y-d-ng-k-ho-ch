@@ -4,38 +4,22 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>VNPT Sales Planning System</title>
-    
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
-    
     <style>
       body {
         font-family: 'Roboto', sans-serif;
         scroll-behavior: smooth;
-        margin: 0;
       }
-      .vnpt-gradient {
-        background: linear-gradient(135deg, #0066CC 0%, #004C99 100%);
-      }
-      .hide-scrollbar::-webkit-scrollbar {
-        display: none;
-      }
-      .hide-scrollbar {
-        -ms-overflow-style: none;
-        scrollbar-width: none;
-      }
-      .dashboard-dark {
-        background-color: #0d121f;
-      }
-      .glass-card {
-        background: #1c2438;
-        border: 1px solid rgba(255, 255, 255, 0.05);
-      }
+      .vnpt-gradient { background: linear-gradient(135deg, #0066CC 0%, #004C99 100%); }
+      .hide-scrollbar::-webkit-scrollbar { display: none; }
+      .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      .dashboard-dark { background-color: #0d121f; }
+      .glass-card { background: #1c2438; border: 1px solid rgba(255, 255, 255, 0.05); }
     </style>
   </head>
   <body class="h-full">
     <div id="root" class="h-full"></div>
-
     <script type="module" src="./index.tsx"></script>
   </body>
 </html>
