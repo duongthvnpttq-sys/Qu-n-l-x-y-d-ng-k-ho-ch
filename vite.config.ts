@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   build: {
-    // 1. Chia nhỏ code (Manual Chunks) để giảm tải dung lượng file đơn lẻ
+    // 1. Chia nhỏ các thư viện nặng thành các khối riêng biệt
     rollupOptions: {
       output: {
         manualChunks(id) {
