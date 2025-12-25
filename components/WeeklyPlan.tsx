@@ -50,6 +50,46 @@ export const WeeklyPlan: React.FC<WeeklyPlanProps> = ({ currentUser, plans, onAd
     XLSX.writeFile(wb, "VNPT_Mau_Ke_Hoach_Day_Du.xlsx");
   };
 
+  const parseExcelDate = (val: any): string | null => {
+    if (!val) return null;
+
+    // Handle Excel Serial Date (Number)
+    if (typeof val === 'number') {
+      // Excel serial date 1 is 1900-01-01, but JS date uses 1970.
+      // 25569 is the offset days.
+      const date = new Date(Math.round((val - 25569) * 86400 * 1000));
+      if (!isNaN(date.getTime())) {
+        return date.toISOString().split('T')[0];
+      }
+    }
+
+    // Handle String Date
+    if (typeof val === 'string') {
+      const trimmed = val.trim();
+      // Matches YYYY-MM-DD
+      if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+        return trimmed;
+      }
+      // Matches DD/MM/YYYY or DD-MM-YYYY
+      if (/^\d{1,2}[\/-]\d{1,2}[\/-]\d{4}$/.test(trimmed)) {
+        const parts = trimmed.split(/[\/-]/);
+        // Assuming DD/MM/YYYY
+        return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+      }
+      
+      // Try standard parse
+      const d = new Date(trimmed);
+      if (!isNaN(d.getTime())) {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+    }
+
+    return null;
+  };
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -67,7 +107,9 @@ export const WeeklyPlan: React.FC<WeeklyPlanProps> = ({ currentUser, plans, onAd
         const tempDates = [...existingDates];
 
         data.forEach(row => {
-          const dateStr = row[1]?.toString().trim();
+          const rawDate = row[1];
+          const dateStr = parseExcelDate(rawDate);
+          
           if (!dateStr || tempDates.includes(dateStr)) {
             errors++;
             return;
@@ -112,9 +154,10 @@ export const WeeklyPlan: React.FC<WeeklyPlanProps> = ({ currentUser, plans, onAd
           added++;
         });
 
-        alert(`Hoàn tất nhập dữ liệu: Thêm mới ${added}, Bỏ qua ${errors}.`);
+        alert(`Hoàn tất nhập dữ liệu: Thêm mới ${added}, Bỏ qua ${errors} (trùng ngày hoặc lỗi ngày).`);
         if (fileInputRef.current) fileInputRef.current.value = '';
       } catch (err) {
+        console.error(err);
         alert("Lỗi: Kiểm tra lại định dạng file Excel.");
       }
     };
