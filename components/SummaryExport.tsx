@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { User, Plan } from '../types';
 import * as XLSX from 'xlsx';
-import { Filter, FileSpreadsheet, FileCheck, AlertCircle, RefreshCw, Search } from 'lucide-react';
+import { Filter, FileSpreadsheet, FileCheck, AlertCircle, RefreshCw, Search, MessageSquare, Award } from 'lucide-react';
 
 interface SummaryExportProps {
   users: User[];
@@ -44,26 +44,27 @@ export const SummaryExport: React.FC<SummaryExportProps> = ({ users, plans }) =>
 
   const exportExcel = () => {
     try {
-      const title = [['BÁO CÁO TỔNG HỢP KẾT QUẢ KINH DOANH VNPT - ĐẦY ĐỦ CHỈ TIÊU']];
+      const title = [['BÁO CÁO TỔNG HỢP KẾT QUẢ KINH DOANH VNPT - CHI TIẾT ĐÁNH GIÁ']];
       const info = [[`Ngày xuất: ${new Date().toLocaleDateString('vi-VN')} | Số lượng: ${filteredPlans.length} bản ghi`]];
       const headers = [[
         'STT', 'Tuần', 'Ngày', 'Nhân viên', 'Địa bàn', 'Phối hợp', 'Nội dung',
         'CT SIM', 'KQ SIM', 'CT Fiber', 'KQ Fiber', 'CT MyTV', 'KQ MyTV',
         'CT M/C', 'KQ M/C', 'CT CNTT', 'KQ CNTT', 'CT DT CNTT', 'KQ DT CNTT',
-        'KH Tiếp cận', 'HĐ Ký', 'Trạng thái'
+        'KH Tiếp cận', 'HĐ Ký', 'Trạng thái', 'Điểm Cộng', 'Điểm Trừ', 'Nhận Xét Quản Lý'
       ]];
 
       const data = filteredPlans.map((p, idx) => [
         idx + 1, p.week_number, p.date, p.employee_name, p.area, p.collaborators || '', p.work_content,
         p.sim_target, p.sim_result, p.fiber_target, p.fiber_result, p.mytv_target, p.mytv_result,
         p.mesh_camera_target, p.mesh_camera_result, p.cntt_target, p.cntt_result, p.revenue_cntt_target, p.revenue_cntt_result,
-        p.customers_contacted, p.contracts_signed, getStatusText(p.status)
+        p.customers_contacted, p.contracts_signed, getStatusText(p.status), 
+        p.bonus_score || 0, p.penalty_score || 0, p.manager_comment || ''
       ]);
 
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.aoa_to_sheet([...title, ...info, [], ...headers, ...data]);
       XLSX.utils.book_append_sheet(wb, ws, "TongHop");
-      XLSX.writeFile(wb, `${generateFileName('Bao_Cao_Hieu_Qua')}.xlsx`);
+      XLSX.writeFile(wb, `${generateFileName('Bao_Cao_Hieu_Qua_Chi_Tiet')}.xlsx`);
     } catch (error) {
       alert("Lỗi xuất file Excel");
     }
@@ -118,14 +119,14 @@ export const SummaryExport: React.FC<SummaryExportProps> = ({ users, plans }) =>
 
         <div className="flex flex-wrap gap-3">
            <button onClick={exportExcel} className="flex items-center gap-2 bg-emerald-600 text-white px-8 py-3 rounded-lg hover:bg-emerald-700 transition font-bold shadow-md">
-             <FileSpreadsheet size={18} /> Xuất Excel Dữ Liệu Đầy Đủ
+             <FileSpreadsheet size={18} /> Xuất Excel Chi Tiết Đánh Giá
            </button>
         </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
         <div className="px-6 py-4 border-b bg-gray-50 flex justify-between items-center">
-          <h3 className="font-bold text-gray-700">Kết Quả Tra Cứu ({filteredPlans.length})</h3>
+          <h3 className="font-bold text-gray-700 uppercase text-sm tracking-widest">Danh Sách Kết Quả ({filteredPlans.length})</h3>
         </div>
         <div className="overflow-x-auto">
            <table className="w-full text-sm text-left">
@@ -133,9 +134,9 @@ export const SummaryExport: React.FC<SummaryExportProps> = ({ users, plans }) =>
                <tr>
                  <th className="px-4 py-4 font-bold text-gray-600">Thời gian</th>
                  <th className="px-4 py-4 font-bold text-gray-600">Nhân Viên</th>
-                 <th className="px-4 py-4 font-bold text-gray-600">Địa Bàn</th>
+                 <th className="px-4 py-4 font-bold text-gray-600 text-center">Đánh Giá</th>
                  <th className="px-4 py-4 font-bold text-gray-600 text-center">Trạng Thái</th>
-                 <th className="px-4 py-4 font-bold text-gray-600 text-right">Tổng Kết Sản Phẩm</th>
+                 <th className="px-4 py-4 font-bold text-gray-600 text-right">Sản Phẩm & Nhận Xét</th>
                </tr>
              </thead>
              <tbody className="divide-y divide-gray-100">
@@ -152,18 +153,38 @@ export const SummaryExport: React.FC<SummaryExportProps> = ({ users, plans }) =>
                         <div className="font-medium text-gray-900">{p.employee_name}</div>
                         <div className="text-xs text-gray-500">{p.position}</div>
                      </td>
-                     <td className="px-4 py-4 text-gray-600">{p.area}</td>
+                     <td className="px-4 py-4 text-center">
+                        <div className="flex flex-col items-center gap-1">
+                           <div className="flex items-center gap-1 text-[10px] font-black">
+                              {p.bonus_score && p.bonus_score > 0 ? (
+                                <span className="text-emerald-600">+{p.bonus_score}</span>
+                              ) : null}
+                              {p.penalty_score && p.penalty_score > 0 ? (
+                                <span className="text-rose-600">-{p.penalty_score}</span>
+                              ) : null}
+                              {(!p.bonus_score && !p.penalty_score) && <span className="text-gray-300">-</span>}
+                           </div>
+                           {p.rating === 'rated' && <Award size={14} className="text-purple-500" />}
+                        </div>
+                     </td>
                      <td className="px-4 py-4 text-center">
                         <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${
-                          p.status === 'completed' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'
+                          p.status === 'completed' ? 'bg-blue-100 text-blue-700' : 
+                          p.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
                         }`}>
                           {getStatusText(p.status)}
                         </span>
                      </td>
                      <td className="px-4 py-4 text-right">
-                        <div className="flex flex-col text-xs">
-                          <span className="font-bold text-blue-600">{p.sim_result} SIM | {p.fiber_result} Fib</span>
-                          <span className="text-gray-500">{p.mesh_camera_result} M/C | {p.cntt_result} CNTT</span>
+                        <div className="flex flex-col gap-1">
+                          <div className="text-[11px] font-bold text-blue-600">
+                             {p.sim_result} SIM | {p.fiber_result} Fib | {p.mesh_camera_result} M/C
+                          </div>
+                          {p.manager_comment && (
+                            <div className="flex items-center justify-end gap-1 text-[10px] text-gray-400 italic">
+                               <MessageSquare size={10} /> {p.manager_comment.length > 20 ? p.manager_comment.substring(0, 20) + '...' : p.manager_comment}
+                            </div>
+                          )}
                         </div>
                      </td>
                    </tr>

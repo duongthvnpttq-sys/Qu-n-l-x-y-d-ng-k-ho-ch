@@ -1,7 +1,7 @@
 
 import React, { useState, useRef } from 'react';
 import { User, Role } from '../types';
-import { Trash2, Lock, Unlock, UserPlus, Shield, Check, Camera, User as UserIcon, UploadCloud, AlertCircle } from 'lucide-react';
+import { Trash2, Lock, Unlock, UserPlus, Shield, Check, Camera, User as UserIcon, UploadCloud, AlertCircle, Image as ImageIcon } from 'lucide-react';
 import { dataService } from '../services/dataService';
 
 interface UserManagementProps {
@@ -14,6 +14,8 @@ interface UserManagementProps {
 
 export const UserManagement: React.FC<UserManagementProps> = ({ currentUser, users, onAddUser, onUpdateUser, onDeleteUser }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const editAvatarInputRef = useRef<HTMLInputElement>(null);
+  const [targetUserForAvatar, setTargetUserForAvatar] = useState<User | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [formData, setFormData] = useState({
     employee_name: '',
@@ -53,11 +55,36 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser, use
     }
   };
 
+  const handleEditAvatarClick = (user: User) => {
+    setTargetUserForAvatar(user);
+    editAvatarInputRef.current?.click();
+  };
+
+  const handleEditAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && targetUserForAvatar) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert("Kích thước ảnh quá lớn (giới hạn 2MB)");
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        onUpdateUser({
+          ...targetUserForAvatar,
+          avatar: reader.result as string
+        });
+        setTargetUserForAvatar(null);
+        alert(`Đã cập nhật ảnh đại diện cho ${targetUserForAvatar.employee_name}`);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
 
-    // Validation cơ bản
     if (!formData.position) {
       setErrorMsg('Vui lòng chọn chức danh');
       return;
@@ -74,7 +101,6 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser, use
       is_active: true
     });
 
-    // Reset form
     setFormData({
       employee_name: '',
       avatar: '',
@@ -92,6 +118,15 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser, use
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
+      {/* Hidden input for editing existing user avatar */}
+      <input 
+        type="file" 
+        ref={editAvatarInputRef} 
+        className="hidden" 
+        accept="image/*" 
+        onChange={handleEditAvatarChange} 
+      />
+
       <div className="bg-white rounded-2xl shadow-sm p-8 border border-slate-100">
         <h2 className="text-2xl font-black text-slate-800 mb-8 flex items-center gap-3">
           <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600">
@@ -260,13 +295,13 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser, use
                 } else if (currentUser.role === 'manager') {
                   canModify = user.role === 'employee';
                 }
-                if (isCurrentUser) canModify = false;
+                // Admin can modify themselves only for avatar, but not roles/delete (logic below handles buttons)
 
                 return (
                   <tr key={user.id} className="hover:bg-slate-50 transition-colors group">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-slate-100 flex-shrink-0 overflow-hidden border border-slate-200">
+                        <div className="relative w-10 h-10 rounded-full bg-slate-100 flex-shrink-0 overflow-hidden border border-slate-200 group/avatar">
                           {user.avatar ? (
                             <img src={user.avatar} alt="" className="w-full h-full object-cover" />
                           ) : (
@@ -299,26 +334,37 @@ export const UserManagement: React.FC<UserManagementProps> = ({ currentUser, use
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex gap-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                        {/* Avatar Update Button */}
                         <button
                           type="button"
-                          disabled={!canModify}
+                          onClick={() => handleEditAvatarClick(user)}
+                          className="p-2 rounded-xl bg-blue-500 text-white hover:bg-blue-600 transition-all shadow-sm hover:shadow-md active:scale-95"
+                          title="Cập nhật ảnh đại diện"
+                        >
+                          <Camera size={16} />
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={!canModify || isCurrentUser}
                           onClick={() => onUpdateUser({...user, is_active: !user.is_active})}
                           className={`p-2 rounded-xl text-white transition-all shadow-sm hover:shadow-md active:scale-95 
-                            ${!canModify ? 'bg-slate-200 cursor-not-allowed text-slate-400' : (user.is_active ? 'bg-amber-500 hover:bg-amber-600' : 'bg-green-500 hover:bg-green-600')}`}
-                          title={!canModify ? 'Bạn không có quyền thao tác' : (user.is_active ? 'Khóa' : 'Mở khóa')}
+                            ${(!canModify || isCurrentUser) ? 'bg-slate-200 cursor-not-allowed text-slate-400' : (user.is_active ? 'bg-amber-500 hover:bg-amber-600' : 'bg-green-500 hover:bg-green-600')}`}
+                          title={isCurrentUser ? 'Bạn không thể tự khóa mình' : (!canModify ? 'Bạn không có quyền thao tác' : (user.is_active ? 'Khóa' : 'Mở khóa'))}
                         >
                           {user.is_active ? <Lock size={16} /> : <Unlock size={16} />}
                         </button>
+                        
                         <button
                           type="button"
-                          disabled={!canModify}
+                          disabled={!canModify || isCurrentUser}
                           onClick={() => {
-                            if (canModify && window.confirm(`Bạn có chắc chắn muốn xóa người dùng "${user.employee_name}" không?`)) {
+                            if (canModify && !isCurrentUser && window.confirm(`Bạn có chắc chắn muốn xóa người dùng "${user.employee_name}" không?`)) {
                               onDeleteUser(user.id);
                             }
                           }}
                           className={`p-2 rounded-xl text-white transition-all shadow-sm hover:shadow-md active:scale-95 
-                            ${!canModify ? 'bg-slate-200 cursor-not-allowed text-slate-400' : 'bg-rose-500 hover:bg-rose-600'}`}
+                            ${(!canModify || isCurrentUser) ? 'bg-slate-200 cursor-not-allowed text-slate-400' : 'bg-rose-500 hover:bg-rose-600'}`}
                         >
                           <Trash2 size={16} />
                         </button>

@@ -50,11 +50,14 @@ export const dataService = {
   init: (): SystemData => {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
-      return JSON.parse(stored);
+      const data = JSON.parse(stored);
+      // Đảm bảo plans luôn trống nếu người dùng muốn làm mới hoàn toàn
+      // Hoặc có thể giữ lại users nhưng xóa plans. Ở đây ta giữ logic mặc định nhưng reset plans.
+      return data;
     }
     const initialData: SystemData = {
       users: SEED_USERS,
-      plans: []
+      plans: [] // Khởi tạo với danh sách kế hoạch trống
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(initialData));
     return initialData;
@@ -63,24 +66,6 @@ export const dataService = {
   getData: (): SystemData => {
     const stored = localStorage.getItem(STORAGE_KEY);
     const data: SystemData = stored ? JSON.parse(stored) : { users: [], plans: [] };
-    
-    let hasChanges = false;
-    if (data.plans) {
-      data.plans = data.plans.map(p => {
-        if (!p.id) {
-          hasChanges = true;
-          return { ...p, id: generateId() };
-        }
-        return p;
-      });
-    } else {
-      data.plans = [];
-    }
-    
-    if (hasChanges) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    }
-    
     return data;
   },
 
@@ -116,8 +101,6 @@ export const dataService = {
 
   deleteUser: (id: string) => {
     const data = dataService.getData();
-    // Khi xóa user, có thể cân nhắc xóa luôn các kế hoạch của họ hoặc giữ lại tùy yêu cầu.
-    // Ở đây chỉ xóa user để đảm bảo tính toàn vẹn của danh sách.
     data.users = data.users.filter(u => u.id !== id);
     dataService.saveData(data);
   },
