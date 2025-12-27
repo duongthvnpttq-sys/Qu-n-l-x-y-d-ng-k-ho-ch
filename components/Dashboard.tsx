@@ -99,7 +99,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ users, plans }) => {
       plan: number, 
       actual: number, 
       id: string, 
-      avatar?: string 
+      avatar?: string,
+      position: string 
     }> = {};
     
     // Init employees
@@ -110,7 +111,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ users, plans }) => {
            plan: 0, 
            actual: 0, 
            id: u.employee_id,
-           avatar: u.avatar 
+           avatar: u.avatar,
+           position: u.position
         };
       }
     });
@@ -140,7 +142,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ users, plans }) => {
     const bottom2 = rankedEmployees.length >= 2 ? rankedEmployees.slice(-2).reverse() : []; // Lấy 2 người cuối và đảo ngược để người thấp nhất đứng đầu cảnh báo
 
     // Dữ liệu cho biểu đồ cột (Sắp xếp theo sản lượng thực tế)
-    const barChartData = employeeArray.sort((a, b) => b.actual - a.actual);
+    // CẬP NHẬT: Chỉ hiển thị Nhân viên kinh doanh
+    const barChartData = employeeArray
+      .filter(e => e.position === 'Nhân viên kinh doanh')
+      .sort((a, b) => b.actual - a.actual);
 
     // 4. Logic Biểu đồ tròn (KPI Status)
     let exceeded = 0, met = 0, notMet = 0;
