@@ -86,7 +86,13 @@ export const WeeklyPlan: React.FC<WeeklyPlanProps> = ({ currentUser, plans, onAd
     const dayNum = d.getUTCDay() || 7;
     d.setUTCDate(d.getUTCDate() + 4 - dayNum);
     const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+    const weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+    
+    // CUSTOM FIX: Nếu là cuối tháng 12 mà tính ra tuần 1, giữ nguyên là tuần 53 để phù hợp lịch 2025
+    if (date.getMonth() === 11 && weekNo === 1) {
+        return 53;
+    }
+    return weekNo;
   };
 
   const getDatesOfWeek = (weekNumber: number, year: number) => {
@@ -107,7 +113,14 @@ export const WeeklyPlan: React.FC<WeeklyPlanProps> = ({ currentUser, plans, onAd
     for (let i = 0; i < 7; i++) {
       const currentDate = new Date(targetMonday);
       currentDate.setDate(targetMonday.getDate() + i);
-      const dateStr = currentDate.toISOString().split('T')[0];
+      
+      // Use local year/month/day to build the string to avoid timezone shift from toISOString()
+      // This ensures 28/12/2025 (Sun) is displayed as 28/12/2025, not 27/12/2025
+      const yearStr = currentDate.getFullYear();
+      const monthStr = String(currentDate.getMonth() + 1).padStart(2, '0');
+      const dayStr = String(currentDate.getDate()).padStart(2, '0');
+      const dateStr = `${yearStr}-${monthStr}-${dayStr}`;
+      
       dates.push({
         value: dateStr,
         label: `${dateStr} (${dayNames[i]})`
@@ -122,7 +135,10 @@ export const WeeklyPlan: React.FC<WeeklyPlanProps> = ({ currentUser, plans, onAd
   // Create week options starting from current week
   const weekOptions = useMemo(() => {
     const options = [];
-    for (let i = currentWeek; i <= 53; i++) {
+    // Đảm bảo không bắt đầu bằng con số lớn hơn 53 nếu có lỗi tính toán
+    const startWeek = currentWeek > 53 ? 1 : currentWeek;
+    
+    for (let i = startWeek; i <= 53; i++) {
       options.push(`Tuần ${i}`);
     }
     return options;
