@@ -58,6 +58,11 @@ export interface Plan {
   
   status: 'pending' | 'approved' | 'rejected' | 'completed';
   
+  // Adjustment Workflow
+  adjustment_status?: 'pending' | 'approved' | 'rejected';
+  adjustment_reason?: string;
+  adjustment_data?: string; // JSON string storing the proposed target changes
+  
   // Rating
   rating?: 'rated' | '';
   manager_comment?: string;
