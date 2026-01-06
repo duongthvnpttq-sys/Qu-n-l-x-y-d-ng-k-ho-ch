@@ -5,25 +5,26 @@ import bcrypt from 'bcryptjs';
 
 /**
  * --- QUAN TRỌNG: CẬP NHẬT CƠ SỞ DỮ LIỆU ---
- * Nếu gặp lỗi "Could not find the '...' column", vui lòng chạy lệnh SQL sau trong Supabase SQL Editor:
+ * Nếu gặp lỗi "Could not find the '...' column" hoặc lỗi "already exists", 
+ * vui lòng chạy lệnh SQL sau trong Supabase SQL Editor (đã thêm 'if not exists' để an toàn):
  * 
- * alter table "plans" add column "collaborators" text;
- * alter table "plans" add column "other_services_target" numeric default 0;
- * alter table "plans" add column "other_services_result" numeric default 0;
- * alter table "plans" add column "adjustment_status" text;
- * alter table "plans" add column "adjustment_reason" text;
- * alter table "plans" add column "adjustment_data" text;
- * alter table "plans" add column "rating" text;
- * alter table "plans" add column "manager_comment" text;
- * alter table "plans" add column "attitude_score" text;
- * alter table "plans" add column "discipline_score" text;
- * alter table "plans" add column "effectiveness_score" text;
- * alter table "plans" add column "evidence_photo" text;
- * alter table "plans" add column "bonus_score" numeric default 0;
- * alter table "plans" add column "penalty_score" numeric default 0;
- * alter table "plans" add column "approved_by" text;
- * alter table "plans" add column "approved_at" text;
- * alter table "plans" add column "returned_reason" text;
+ * alter table "plans" add column if not exists "collaborators" text;
+ * alter table "plans" add column if not exists "other_services_target" numeric default 0;
+ * alter table "plans" add column if not exists "other_services_result" numeric default 0;
+ * alter table "plans" add column if not exists "adjustment_status" text;
+ * alter table "plans" add column if not exists "adjustment_reason" text;
+ * alter table "plans" add column if not exists "adjustment_data" text;
+ * alter table "plans" add column if not exists "rating" text;
+ * alter table "plans" add column if not exists "manager_comment" text;
+ * alter table "plans" add column if not exists "attitude_score" text;
+ * alter table "plans" add column if not exists "discipline_score" text;
+ * alter table "plans" add column if not exists "effectiveness_score" text;
+ * alter table "plans" add column if not exists "evidence_photo" text;
+ * alter table "plans" add column if not exists "bonus_score" numeric default 0;
+ * alter table "plans" add column if not exists "penalty_score" numeric default 0;
+ * alter table "plans" add column if not exists "approved_by" text;
+ * alter table "plans" add column if not exists "approved_at" text;
+ * alter table "plans" add column if not exists "returned_reason" text;
  */
 
 const SUPABASE_URL = 'https://oppgitgwutlpqwmcyfxj.supabase.co';
