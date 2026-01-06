@@ -1,7 +1,7 @@
 
 import React, { useState, useRef } from 'react';
 import { User, Plan } from '../types';
-import { Star, ShieldAlert, Award, Image as ImageIcon, PlusCircle, MinusCircle, UploadCloud, FileText, Camera } from 'lucide-react';
+import { Star, ShieldAlert, Award, Image as ImageIcon, PlusCircle, MinusCircle, UploadCloud, FileText, Camera, Target, TrendingUp } from 'lucide-react';
 
 interface RatingProps {
   currentUser: User;
@@ -109,6 +109,71 @@ export const RatingEvaluation: React.FC<RatingProps> = ({ currentUser, plans, on
 
             {selectedPlan && (
               <form onSubmit={handleSubmit} className="space-y-6 animate-in slide-in-from-top-4 duration-500">
+                
+                {/* --- NEW: PERFORMANCE RESULT SUMMARY BLOCK --- */}
+                <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200 shadow-inner">
+                  <h3 className="text-sm font-black text-slate-700 uppercase tracking-tight mb-4 flex items-center gap-2 border-b border-slate-200 pb-2">
+                    <Target size={16} className="text-blue-500" /> Kết Quả Thực Hiện
+                  </h3>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                     {[
+                       { l: 'SIM', t: selectedPlan.sim_target, r: selectedPlan.sim_result },
+                       { l: 'Fiber', t: selectedPlan.fiber_target, r: selectedPlan.fiber_result },
+                       { l: 'MyTV', t: selectedPlan.mytv_target, r: selectedPlan.mytv_result },
+                       { l: 'Mesh/Cam', t: selectedPlan.mesh_camera_target, r: selectedPlan.mesh_camera_result },
+                       { l: 'CNTT', t: selectedPlan.cntt_target, r: selectedPlan.cntt_result },
+                       { l: 'Doanh thu', t: selectedPlan.revenue_cntt_target, r: selectedPlan.revenue_cntt_result, isMoney: true },
+                     ].map((m, i) => {
+                       const percent = m.t > 0 ? (m.r / m.t) * 100 : (m.r > 0 ? 100 : 0);
+                       const isHigh = percent >= 100;
+                       return (
+                         <div key={i} className="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
+                            <div className="flex justify-between items-center mb-1.5">
+                               <span className="text-[10px] font-bold text-slate-500 uppercase">{m.l}</span>
+                               <span className={`text-[10px] font-black ${isHigh ? 'text-emerald-500' : 'text-orange-500'}`}>
+                                 {percent.toFixed(0)}%
+                               </span>
+                            </div>
+                            <div className="flex items-end justify-between mb-2">
+                               <div className="text-[10px] font-medium text-slate-400 flex flex-col">
+                                 <span>KH</span>
+                                 <span>{m.isMoney ? (m.t/1000000).toFixed(1) : m.t}</span>
+                               </div>
+                               <div className="text-sm font-black text-slate-800 flex flex-col items-end">
+                                 <span className="text-[8px] font-bold text-slate-300 uppercase">Thực đạt</span>
+                                 <span>{m.isMoney ? (m.r/1000000).toFixed(1) : m.r}</span>
+                               </div>
+                            </div>
+                            <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                               <div 
+                                 className={`h-full rounded-full transition-all duration-500 ${isHigh ? 'bg-emerald-500' : 'bg-orange-400'}`} 
+                                 style={{width: `${Math.min(percent, 100)}%`}}
+                               ></div>
+                            </div>
+                         </div>
+                       )
+                     })}
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-2 gap-4 pt-4 border-t border-slate-200">
+                      <div className="flex flex-col">
+                         <span className="text-[10px] font-bold text-slate-500 uppercase">Khách hàng tiếp cận</span>
+                         <span className="text-base font-black text-blue-600">{selectedPlan.customers_contacted || 0}</span>
+                      </div>
+                      <div className="flex flex-col text-right">
+                         <span className="text-[10px] font-bold text-slate-500 uppercase">Hợp đồng đã ký</span>
+                         <span className="text-base font-black text-emerald-600">{selectedPlan.contracts_signed || 0}</span>
+                      </div>
+                  </div>
+                  
+                  {selectedPlan.challenges && (
+                    <div className="mt-4 text-xs bg-rose-50 text-rose-700 p-3 rounded-lg border border-rose-100 italic">
+                      <span className="font-bold not-italic mr-1">Khó khăn:</span> "{selectedPlan.challenges}"
+                    </div>
+                  )}
+                </div>
+
                 {/* Image Upload for Evidence */}
                 <div className="space-y-3">
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Ảnh Chứng Minh Kết Quả</label>
