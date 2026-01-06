@@ -5,13 +5,14 @@ import {
   PlusCircle, Clock, CheckCircle, XCircle, 
   Download, Upload, Users as UsersIcon,
   Smartphone, Globe, Tv, Camera, Cpu, DollarSign, Plus,
-  CalendarOff, History, ChevronDown, ChevronUp
+  CalendarOff, History, ChevronDown, ChevronUp, Edit3, AlertCircle, Save
 } from 'lucide-react';
 
 interface WeeklyPlanProps {
   currentUser: User;
   plans: Plan[];
   onAddPlan: (plan: Omit<Plan, 'id' | 'created_at'>) => void;
+  onUpdatePlan: (plan: Plan) => void; // Added for adjustments
 }
 
 const statusConfig: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
@@ -21,7 +22,7 @@ const statusConfig: Record<string, { label: string; color: string; icon: React.R
   completed: { label: 'Hoàn thành', color: 'bg-blue-50 text-blue-700 border-blue-100', icon: <CheckCircle size={12} /> }
 };
 
-const PlanCard: React.FC<{ plan: Plan }> = ({ plan }) => (
+const PlanCard: React.FC<{ plan: Plan; onAdjustRequest: (plan: Plan) => void }> = ({ plan, onAdjustRequest }) => (
   <div className="bg-white rounded-3xl shadow-sm p-6 border border-slate-100 group hover:shadow-md transition-all relative overflow-hidden">
     <div className={`absolute top-0 right-0 px-4 py-1.5 rounded-bl-2xl text-[10px] font-black uppercase border-b border-l flex items-center gap-1.5 ${statusConfig[plan.status]?.color || 'bg-gray-100 text-gray-600'}`}>
         {statusConfig[plan.status]?.icon}
@@ -38,7 +39,7 @@ const PlanCard: React.FC<{ plan: Plan }> = ({ plan }) => (
       "{plan.work_content}"
     </div>
 
-    <div className="grid grid-cols-4 gap-2">
+    <div className="grid grid-cols-4 gap-2 mb-4">
         <div className="text-center bg-blue-50/50 p-2 rounded-xl border border-blue-100/50">
           <span className="text-[9px] font-black text-blue-500 block uppercase">SIM</span>
           <span className="text-sm font-black text-blue-700">{plan.sim_target}</span>
@@ -56,28 +57,44 @@ const PlanCard: React.FC<{ plan: Plan }> = ({ plan }) => (
           <span className="text-sm font-black text-amber-700">{plan.mesh_camera_target}</span>
         </div>
     </div>
+
+    {/* Adjustment UI Logic */}
+    {plan.status === 'approved' && (
+      <div className="border-t border-slate-100 pt-3">
+        {plan.adjustment_status === 'pending' ? (
+          <div className="flex items-center justify-center gap-2 p-2 bg-amber-50 text-amber-700 rounded-xl text-xs font-bold border border-amber-100 animate-pulse">
+             <Clock size={14} /> Đang chờ duyệt điều chỉnh
+          </div>
+        ) : (
+          <button 
+            onClick={() => onAdjustRequest(plan)}
+            className="w-full flex items-center justify-center gap-2 py-2 text-slate-500 bg-slate-50 hover:bg-slate-100 rounded-xl text-xs font-bold transition-colors border border-slate-200 hover:border-slate-300"
+          >
+             <Edit3 size={14} /> Xin điều chỉnh chỉ tiêu
+          </button>
+        )}
+      </div>
+    )}
   </div>
 );
 
-export const WeeklyPlan: React.FC<WeeklyPlanProps> = ({ currentUser, plans, onAddPlan }) => {
+export const WeeklyPlan: React.FC<WeeklyPlanProps> = ({ currentUser, plans, onAddPlan, onUpdatePlan }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showHistory, setShowHistory] = useState(false);
+  
+  // Adjustment Modal State
+  const [adjustingPlan, setAdjustingPlan] = useState<Plan | null>(null);
+  const [adjustmentForm, setAdjustmentForm] = useState({
+    sim_target: 0, vas_target: 0, fiber_target: 0, mytv_target: 0,
+    mesh_camera_target: 0, cntt_target: 0, revenue_cntt_target: 0, other_services_target: 0,
+    adjustment_reason: ''
+  });
+
   const [formData, setFormData] = useState({
-    week_number: '',
-    date: '',
-    area: '',
-    work_content: '',
-    collaborators: '',
-    sim_target: 0,
-    vas_target: 0,
-    fiber_target: 0,
-    mytv_target: 0,
-    mesh_camera_target: 0,
-    cntt_target: 0,
-    revenue_cntt_target: 0,
-    other_services_target: 0,
-    time_schedule: '8h - 17h',
-    implementation_method: 'Cá nhân'
+    week_number: '', date: '', area: '', work_content: '', collaborators: '',
+    sim_target: 0, vas_target: 0, fiber_target: 0, mytv_target: 0, mesh_camera_target: 0,
+    cntt_target: 0, revenue_cntt_target: 0, other_services_target: 0,
+    time_schedule: '8h - 17h', implementation_method: 'Cá nhân'
   });
 
   // --- HELPER FUNCTIONS FOR DATE/WEEK ---
@@ -87,44 +104,27 @@ export const WeeklyPlan: React.FC<WeeklyPlanProps> = ({ currentUser, plans, onAd
     d.setUTCDate(d.getUTCDate() + 4 - dayNum);
     const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
     const weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
-    
-    // CUSTOM FIX: Nếu là cuối tháng 12 mà tính ra tuần 1, giữ nguyên là tuần 53 để phù hợp lịch 2025
-    if (date.getMonth() === 11 && weekNo === 1) {
-        return 53;
-    }
+    if (date.getMonth() === 11 && weekNo === 1) return 53;
     return weekNo;
   };
 
   const getDatesOfWeek = (weekNumber: number, year: number) => {
-    // Jan 4th is always in week 1
     const d = new Date(year, 0, 4);
     const dayNum = d.getDay() || 7;
-    // Get the Monday of week 1
     const week1Start = new Date(d);
     week1Start.setDate(d.getDate() - dayNum + 1);
-    
-    // Add weeks to get to target week's Monday
     const targetMonday = new Date(week1Start);
     targetMonday.setDate(week1Start.getDate() + (weekNumber - 1) * 7);
-    
     const dates = [];
     const dayNames = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ Nhật'];
-    
     for (let i = 0; i < 7; i++) {
       const currentDate = new Date(targetMonday);
       currentDate.setDate(targetMonday.getDate() + i);
-      
-      // Use local year/month/day to build the string to avoid timezone shift from toISOString()
-      // This ensures 28/12/2025 (Sun) is displayed as 28/12/2025, not 27/12/2025
       const yearStr = currentDate.getFullYear();
       const monthStr = String(currentDate.getMonth() + 1).padStart(2, '0');
       const dayStr = String(currentDate.getDate()).padStart(2, '0');
       const dateStr = `${yearStr}-${monthStr}-${dayStr}`;
-      
-      dates.push({
-        value: dateStr,
-        label: `${dateStr} (${dayNames[i]})`
-      });
+      dates.push({ value: dateStr, label: `${dateStr} (${dayNames[i]})` });
     }
     return dates;
   };
@@ -132,19 +132,13 @@ export const WeeklyPlan: React.FC<WeeklyPlanProps> = ({ currentUser, plans, onAd
   const currentYear = new Date().getFullYear();
   const currentWeek = getISOWeek(new Date());
 
-  // Create week options starting from current week
   const weekOptions = useMemo(() => {
     const options = [];
-    // Đảm bảo không bắt đầu bằng con số lớn hơn 53 nếu có lỗi tính toán
     const startWeek = currentWeek > 53 ? 1 : currentWeek;
-    
-    for (let i = startWeek; i <= 53; i++) {
-      options.push(`Tuần ${i}`);
-    }
+    for (let i = startWeek; i <= 53; i++) options.push(`Tuần ${i}`);
     return options;
   }, [currentWeek]);
 
-  // Generate date options based on selected week
   const dateOptions = useMemo(() => {
     if (!formData.week_number) return [];
     const weekNum = parseInt(formData.week_number.replace('Tuần ', ''));
@@ -152,17 +146,11 @@ export const WeeklyPlan: React.FC<WeeklyPlanProps> = ({ currentUser, plans, onAd
     return getDatesOfWeek(weekNum, currentYear);
   }, [formData.week_number, currentYear]);
 
-  // Handle week change: auto select first day of that week
   const handleWeekChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newWeek = e.target.value;
     const weekNum = parseInt(newWeek.replace('Tuần ', ''));
     const dates = getDatesOfWeek(weekNum, currentYear);
-    
-    setFormData({
-      ...formData,
-      week_number: newWeek,
-      date: dates[0]?.value || '' // Default to Monday
-    });
+    setFormData({ ...formData, week_number: newWeek, date: dates[0]?.value || '' });
   };
 
   // --- DATA FILTERING ---
@@ -171,9 +159,8 @@ export const WeeklyPlan: React.FC<WeeklyPlanProps> = ({ currentUser, plans, onAd
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   const existingDates = myPlans.map(p => p.date);
-
   const now = new Date();
-  const currentDay = now.getDay(); // 0 is Sunday
+  const currentDay = now.getDay();
   const distanceToMonday = (currentDay + 6) % 7;
   const mondayDate = new Date(now);
   mondayDate.setDate(now.getDate() - distanceToMonday);
@@ -182,7 +169,46 @@ export const WeeklyPlan: React.FC<WeeklyPlanProps> = ({ currentUser, plans, onAd
   const activePlans = myPlans.filter(p => new Date(p.date) >= mondayDate);
   const archivedPlans = myPlans.filter(p => new Date(p.date) < mondayDate);
 
-  // --- EXCEL DOWNLOAD ---
+  // --- ADJUSTMENT LOGIC ---
+  const openAdjustmentModal = (plan: Plan) => {
+    setAdjustingPlan(plan);
+    setAdjustmentForm({
+      sim_target: plan.sim_target,
+      vas_target: plan.vas_target,
+      fiber_target: plan.fiber_target,
+      mytv_target: plan.mytv_target,
+      mesh_camera_target: plan.mesh_camera_target,
+      cntt_target: plan.cntt_target,
+      revenue_cntt_target: plan.revenue_cntt_target,
+      other_services_target: plan.other_services_target || 0,
+      adjustment_reason: ''
+    });
+  };
+
+  const submitAdjustment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adjustingPlan) return;
+    if (!adjustmentForm.adjustment_reason.trim()) {
+      alert("Vui lòng nhập lý do điều chỉnh");
+      return;
+    }
+
+    // Extract only target data to save
+    const { adjustment_reason, ...targets } = adjustmentForm;
+
+    const updatedPlan: Plan = {
+      ...adjustingPlan,
+      adjustment_status: 'pending',
+      adjustment_reason: adjustmentForm.adjustment_reason,
+      adjustment_data: JSON.stringify(targets)
+    };
+
+    onUpdatePlan(updatedPlan);
+    setAdjustingPlan(null);
+    alert("Đã gửi yêu cầu điều chỉnh. Vui lòng chờ lãnh đạo phê duyệt.");
+  };
+
+  // --- EXCEL DOWNLOAD & UPLOAD (Existing Logic) ---
   const handleDownloadTemplate = () => {
     const headers = [['Tuần', 'Ngày (YYYY-MM-DD)', 'Địa bàn', 'Nội dung', 'Người phối hợp', 'SIM', 'VAS', 'Fiber', 'MyTV', 'Mesh/Cam', 'DV CNTT', 'DT CNTT', 'DV Khác', 'Thời gian', 'Phương thức']];
     const sample = [['Tuần 1', new Date().toISOString().split('T')[0], 'Xã Yên Thuận', 'Bán hàng lưu động', '', 5, 2, 1, 1, 1, 0, 0, 0, '8h-17h', 'Cá nhân']];
@@ -235,12 +261,10 @@ export const WeeklyPlan: React.FC<WeeklyPlanProps> = ({ currentUser, plans, onAd
         data.forEach(row => {
           const rawDate = row[1];
           const dateStr = parseExcelDate(rawDate);
-          
           if (!dateStr || tempDates.includes(dateStr)) {
             errors++;
             return;
           }
-
           onAddPlan({
             week_number: row[0]?.toString() || 'Tuần 1',
             date: dateStr,
@@ -261,25 +285,14 @@ export const WeeklyPlan: React.FC<WeeklyPlanProps> = ({ currentUser, plans, onAd
             employee_name: currentUser.employee_name,
             position: currentUser.position,
             management_area: currentUser.management_area,
-            sim_result: 0,
-            vas_result: 0,
-            fiber_result: 0,
-            mytv_result: 0,
-            mesh_camera_result: 0,
-            cntt_result: 0,
-            revenue_cntt_result: 0,
-            other_services_result: 0,
-            customers_contacted: 0,
-            contracts_signed: 0,
-            challenges: '',
-            notes: '',
-            status: 'pending',
-            submitted_at: new Date().toISOString()
+            sim_result: 0, vas_result: 0, fiber_result: 0, mytv_result: 0,
+            mesh_camera_result: 0, cntt_result: 0, revenue_cntt_result: 0, other_services_result: 0,
+            customers_contacted: 0, contracts_signed: 0, challenges: '', notes: '',
+            status: 'pending', submitted_at: new Date().toISOString()
           });
           tempDates.push(dateStr);
           added++;
         });
-
         alert(`Hoàn tất nhập dữ liệu: Thêm mới ${added}, Bỏ qua ${errors} (trùng ngày hoặc lỗi ngày).`);
         if (fileInputRef.current) fileInputRef.current.value = '';
       } catch (err) {
@@ -296,45 +309,21 @@ export const WeeklyPlan: React.FC<WeeklyPlanProps> = ({ currentUser, plans, onAd
       alert(`Ngày ${formData.date} đã được lập kế hoạch. Vui lòng chọn ngày khác.`);
       return;
     }
-
     onAddPlan({
       ...formData,
       employee_id: currentUser.employee_id,
       employee_name: currentUser.employee_name,
       position: currentUser.position,
       management_area: currentUser.management_area,
-      sim_result: 0,
-      vas_result: 0,
-      fiber_result: 0,
-      mytv_result: 0,
-      mesh_camera_result: 0,
-      cntt_result: 0,
-      revenue_cntt_result: 0,
-      other_services_result: 0,
-      customers_contacted: 0,
-      contracts_signed: 0,
-      challenges: '',
-      notes: '',
-      status: 'pending',
-      submitted_at: new Date().toISOString()
+      sim_result: 0, vas_result: 0, fiber_result: 0, mytv_result: 0,
+      mesh_camera_result: 0, cntt_result: 0, revenue_cntt_result: 0, other_services_result: 0,
+      customers_contacted: 0, contracts_signed: 0, challenges: '', notes: '',
+      status: 'pending', submitted_at: new Date().toISOString()
     });
-    
-    // Reset form but keep week selected for convenience, or clear it.
-    // Let's clear work content but keep week/date flow smooth
     setFormData({ 
-      ...formData, 
-      date: '', 
-      work_content: '', 
-      area: '', 
-      collaborators: '',
-      sim_target: 0, 
-      vas_target: 0,
-      fiber_target: 0, 
-      mytv_target: 0, 
-      mesh_camera_target: 0, 
-      cntt_target: 0, 
-      revenue_cntt_target: 0,
-      other_services_target: 0
+      ...formData, date: '', work_content: '', area: '', collaborators: '',
+      sim_target: 0, vas_target: 0, fiber_target: 0, mytv_target: 0, 
+      mesh_camera_target: 0, cntt_target: 0, revenue_cntt_target: 0, other_services_target: 0
     });
     alert("Kế hoạch đã được gửi đi.");
   };
@@ -411,56 +400,27 @@ export const WeeklyPlan: React.FC<WeeklyPlanProps> = ({ currentUser, plans, onAd
               </div>
             </div>
 
-            {/* PHẦN CHỈ TIÊU CHI TIẾT */}
             <div className="bg-slate-50/50 p-6 rounded-3xl border border-slate-100 shadow-inner">
                <h4 className="text-base font-black text-blue-700 uppercase mb-5 flex items-center gap-2 tracking-tight">
                  <Plus size={18} /> Đăng ký chỉ tiêu kết quả
                </h4>
-               
                <div className="space-y-6">
-                 {/* Nhóm Dịch vụ lõi */}
                  <div>
                    <p className="text-xs font-bold text-slate-500 uppercase mb-3 border-b border-slate-200 pb-1">Dịch vụ viễn thông</p>
                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-xs text-slate-600 font-bold flex items-center gap-1.5 mb-1.5"><Smartphone size={14} className="text-blue-500"/> SIM</label>
-                        <input type="number" className={inputLightStyle} value={formData.sim_target} onChange={e => setFormData({...formData, sim_target: parseInt(e.target.value)||0})} />
-                      </div>
-                      <div>
-                        <label className="text-xs text-slate-600 font-bold flex items-center gap-1.5 mb-1.5"><Globe size={14} className="text-emerald-500"/> FIBER</label>
-                        <input type="number" className={inputLightStyle} value={formData.fiber_target} onChange={e => setFormData({...formData, fiber_target: parseInt(e.target.value)||0})} />
-                      </div>
-                      <div>
-                        <label className="text-xs text-slate-600 font-bold flex items-center gap-1.5 mb-1.5"><Tv size={14} className="text-purple-500"/> MyTV</label>
-                        <input type="number" className={inputLightStyle} value={formData.mytv_target} onChange={e => setFormData({...formData, mytv_target: parseInt(e.target.value)||0})} />
-                      </div>
-                      <div>
-                        <label className="text-xs text-slate-600 font-bold flex items-center gap-1.5 mb-1.5"><Smartphone size={14} className="text-indigo-500"/> VAS</label>
-                        <input type="number" className={inputLightStyle} value={formData.vas_target} onChange={e => setFormData({...formData, vas_target: parseInt(e.target.value)||0})} />
-                      </div>
+                      <div><label className="text-xs text-slate-600 font-bold mb-1.5 block">SIM</label><input type="number" className={inputLightStyle} value={formData.sim_target} onChange={e => setFormData({...formData, sim_target: parseInt(e.target.value)||0})} /></div>
+                      <div><label className="text-xs text-slate-600 font-bold mb-1.5 block">FIBER</label><input type="number" className={inputLightStyle} value={formData.fiber_target} onChange={e => setFormData({...formData, fiber_target: parseInt(e.target.value)||0})} /></div>
+                      <div><label className="text-xs text-slate-600 font-bold mb-1.5 block">MyTV</label><input type="number" className={inputLightStyle} value={formData.mytv_target} onChange={e => setFormData({...formData, mytv_target: parseInt(e.target.value)||0})} /></div>
+                      <div><label className="text-xs text-slate-600 font-bold mb-1.5 block">VAS</label><input type="number" className={inputLightStyle} value={formData.vas_target} onChange={e => setFormData({...formData, vas_target: parseInt(e.target.value)||0})} /></div>
                    </div>
                  </div>
-
-                 {/* Nhóm Dịch vụ số & CNTT */}
                  <div>
                    <p className="text-xs font-bold text-slate-500 uppercase mb-3 border-b border-slate-200 pb-1">Dịch vụ số & CNTT</p>
                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-xs text-slate-600 font-bold flex items-center gap-1.5 mb-1.5"><Camera size={14} className="text-orange-500"/> MESH+CAM</label>
-                        <input type="number" className={inputLightStyle} value={formData.mesh_camera_target} onChange={e => setFormData({...formData, mesh_camera_target: parseInt(e.target.value)||0})} />
-                      </div>
-                      <div>
-                        <label className="text-xs text-slate-600 font-bold flex items-center gap-1.5 mb-1.5"><Cpu size={14} className="text-cyan-500"/> DV CNTT</label>
-                        <input type="number" className={inputLightStyle} value={formData.cntt_target} onChange={e => setFormData({...formData, cntt_target: parseInt(e.target.value)||0})} />
-                      </div>
-                      <div>
-                        <label className="text-xs text-slate-600 font-bold flex items-center gap-1.5 mb-1.5"><DollarSign size={14} className="text-rose-500"/> DT CNTT (đ)</label>
-                        <input type="number" className={inputLightStyle} value={formData.revenue_cntt_target} onChange={e => setFormData({...formData, revenue_cntt_target: parseInt(e.target.value)||0})} />
-                      </div>
-                      <div>
-                        <label className="text-xs text-slate-600 font-bold flex items-center gap-1.5 mb-1.5"><Plus size={14} className="text-gray-500"/> DV KHÁC</label>
-                        <input type="number" className={inputLightStyle} value={formData.other_services_target} onChange={e => setFormData({...formData, other_services_target: parseInt(e.target.value)||0})} />
-                      </div>
+                      <div><label className="text-xs text-slate-600 font-bold mb-1.5 block">MESH+CAM</label><input type="number" className={inputLightStyle} value={formData.mesh_camera_target} onChange={e => setFormData({...formData, mesh_camera_target: parseInt(e.target.value)||0})} /></div>
+                      <div><label className="text-xs text-slate-600 font-bold mb-1.5 block">DV CNTT</label><input type="number" className={inputLightStyle} value={formData.cntt_target} onChange={e => setFormData({...formData, cntt_target: parseInt(e.target.value)||0})} /></div>
+                      <div><label className="text-xs text-slate-600 font-bold mb-1.5 block">DT CNTT (đ)</label><input type="number" className={inputLightStyle} value={formData.revenue_cntt_target} onChange={e => setFormData({...formData, revenue_cntt_target: parseInt(e.target.value)||0})} /></div>
+                      <div><label className="text-xs text-slate-600 font-bold mb-1.5 block">DV KHÁC</label><input type="number" className={inputLightStyle} value={formData.other_services_target} onChange={e => setFormData({...formData, other_services_target: parseInt(e.target.value)||0})} /></div>
                    </div>
                  </div>
                </div>
@@ -479,7 +439,6 @@ export const WeeklyPlan: React.FC<WeeklyPlanProps> = ({ currentUser, plans, onAd
           <h3 className="text-xl font-black text-slate-800 uppercase tracking-tighter">Lịch Sử Kế Hoạch ({myPlans.length})</h3>
         </div>
         
-        {/* ACTIVE PLANS (This Week & Future) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {activePlans.length === 0 ? (
             <div className="col-span-2 py-10 bg-white rounded-3xl border border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-300">
@@ -487,11 +446,10 @@ export const WeeklyPlan: React.FC<WeeklyPlanProps> = ({ currentUser, plans, onAd
                <p className="font-bold text-sm">Chưa có kế hoạch tuần này.</p>
             </div>
           ) : (
-            activePlans.map(plan => <PlanCard key={plan.id} plan={plan} />)
+            activePlans.map(plan => <PlanCard key={plan.id} plan={plan} onAdjustRequest={openAdjustmentModal} />)
           )}
         </div>
 
-        {/* ARCHIVED PLANS (Past Weeks) */}
         {archivedPlans.length > 0 && (
           <div className="pt-6">
             <button 
@@ -505,12 +463,60 @@ export const WeeklyPlan: React.FC<WeeklyPlanProps> = ({ currentUser, plans, onAd
 
             {showHistory && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 animate-in fade-in slide-in-from-top-4">
-                {archivedPlans.map(plan => <PlanCard key={plan.id} plan={plan} />)}
+                {archivedPlans.map(plan => <PlanCard key={plan.id} plan={plan} onAdjustRequest={openAdjustmentModal} />)}
               </div>
             )}
           </div>
         )}
       </div>
+
+      {/* MODAL ĐIỀU CHỈNH KẾ HOẠCH */}
+      {adjustingPlan && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+           <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+              <div className="bg-amber-500 px-6 py-4 flex justify-between items-center text-white">
+                 <h3 className="text-lg font-bold flex items-center gap-2">
+                   <Edit3 size={20} /> Xin Điều Chỉnh Kế Hoạch
+                 </h3>
+                 <button onClick={() => setAdjustingPlan(null)} className="hover:bg-white/20 p-1 rounded-full transition"><XCircle size={24}/></button>
+              </div>
+              
+              <form onSubmit={submitAdjustment} className="p-6 max-h-[80vh] overflow-y-auto">
+                 <div className="mb-6 bg-amber-50 p-4 rounded-xl border border-amber-100 flex items-start gap-3 text-amber-800 text-sm">
+                    <AlertCircle className="flex-shrink-0 mt-0.5" size={18} />
+                    <p>Bạn đang yêu cầu điều chỉnh chỉ tiêu cho kế hoạch ngày <strong>{new Date(adjustingPlan.date).toLocaleDateString('vi-VN')}</strong>. Yêu cầu này cần được lãnh đạo phê duyệt.</p>
+                 </div>
+
+                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+                    <div><label className="text-xs font-bold text-slate-500 mb-1 block">SIM</label><input type="number" className={inputLightStyle} value={adjustmentForm.sim_target} onChange={e => setAdjustmentForm({...adjustmentForm, sim_target: parseInt(e.target.value)||0})} /></div>
+                    <div><label className="text-xs font-bold text-slate-500 mb-1 block">Fiber</label><input type="number" className={inputLightStyle} value={adjustmentForm.fiber_target} onChange={e => setAdjustmentForm({...adjustmentForm, fiber_target: parseInt(e.target.value)||0})} /></div>
+                    <div><label className="text-xs font-bold text-slate-500 mb-1 block">MyTV</label><input type="number" className={inputLightStyle} value={adjustmentForm.mytv_target} onChange={e => setAdjustmentForm({...adjustmentForm, mytv_target: parseInt(e.target.value)||0})} /></div>
+                    <div><label className="text-xs font-bold text-slate-500 mb-1 block">Mesh/Cam</label><input type="number" className={inputLightStyle} value={adjustmentForm.mesh_camera_target} onChange={e => setAdjustmentForm({...adjustmentForm, mesh_camera_target: parseInt(e.target.value)||0})} /></div>
+                    <div><label className="text-xs font-bold text-slate-500 mb-1 block">CNTT</label><input type="number" className={inputLightStyle} value={adjustmentForm.cntt_target} onChange={e => setAdjustmentForm({...adjustmentForm, cntt_target: parseInt(e.target.value)||0})} /></div>
+                    <div><label className="text-xs font-bold text-slate-500 mb-1 block">Doanh thu</label><input type="number" className={inputLightStyle} value={adjustmentForm.revenue_cntt_target} onChange={e => setAdjustmentForm({...adjustmentForm, revenue_cntt_target: parseInt(e.target.value)||0})} /></div>
+                 </div>
+
+                 <div className="mb-6">
+                    <label className="text-sm font-bold text-slate-700 mb-2 block">Lý do điều chỉnh <span className="text-red-500">*</span></label>
+                    <textarea 
+                      required
+                      className={`${inputLightStyle} h-24 resize-none`}
+                      placeholder="VD: Khách hàng hẹn lại sang tuần sau, phát sinh công việc đột xuất..."
+                      value={adjustmentForm.adjustment_reason}
+                      onChange={e => setAdjustmentForm({...adjustmentForm, adjustment_reason: e.target.value})}
+                    />
+                 </div>
+
+                 <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                    <button type="button" onClick={() => setAdjustingPlan(null)} className="px-6 py-3 rounded-xl text-slate-600 font-bold hover:bg-slate-100 transition">Hủy bỏ</button>
+                    <button type="submit" className="px-6 py-3 rounded-xl bg-amber-500 text-white font-bold hover:bg-amber-600 transition shadow-lg shadow-amber-500/20 flex items-center gap-2">
+                       <Save size={18} /> Gửi yêu cầu
+                    </button>
+                 </div>
+              </form>
+           </div>
+        </div>
+      )}
     </div>
   );
 };

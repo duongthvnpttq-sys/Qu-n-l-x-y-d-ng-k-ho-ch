@@ -3,6 +3,29 @@ import { createClient } from '@supabase/supabase-js';
 import { User, Plan, SystemData } from '../types';
 import bcrypt from 'bcryptjs';
 
+/**
+ * --- QUAN TRỌNG: CẬP NHẬT CƠ SỞ DỮ LIỆU ---
+ * Nếu gặp lỗi "Could not find the '...' column", vui lòng chạy lệnh SQL sau trong Supabase SQL Editor:
+ * 
+ * alter table "plans" add column "collaborators" text;
+ * alter table "plans" add column "other_services_target" numeric default 0;
+ * alter table "plans" add column "other_services_result" numeric default 0;
+ * alter table "plans" add column "adjustment_status" text;
+ * alter table "plans" add column "adjustment_reason" text;
+ * alter table "plans" add column "adjustment_data" text;
+ * alter table "plans" add column "rating" text;
+ * alter table "plans" add column "manager_comment" text;
+ * alter table "plans" add column "attitude_score" text;
+ * alter table "plans" add column "discipline_score" text;
+ * alter table "plans" add column "effectiveness_score" text;
+ * alter table "plans" add column "evidence_photo" text;
+ * alter table "plans" add column "bonus_score" numeric default 0;
+ * alter table "plans" add column "penalty_score" numeric default 0;
+ * alter table "plans" add column "approved_by" text;
+ * alter table "plans" add column "approved_at" text;
+ * alter table "plans" add column "returned_reason" text;
+ */
+
 const SUPABASE_URL = 'https://oppgitgwutlpqwmcyfxj.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_lzQALnCDYyLrGv__8KMhhQ_MYvRGlI8';
 
@@ -131,6 +154,9 @@ export const dataService = {
     
     if (error) {
       console.error('Error creating plan:', error);
+      if (error.code === 'PGRST204' || error.message.includes('column')) {
+        alert('Lỗi Cấu Trúc Dữ Liệu: Thiếu cột trong bảng plans. Vui lòng kiểm tra file services/dataService.ts để xem lệnh SQL cập nhật.');
+      }
       return null;
     }
     return data?.[0] as Plan;
@@ -143,7 +169,12 @@ export const dataService = {
       .update(plan)
       .eq('id', plan.id);
 
-    if (error) console.error('Error updating plan:', error);
+    if (error) {
+      console.error('Error updating plan:', error);
+      if (error.code === 'PGRST204' || error.message.includes('column')) {
+         alert(`Lỗi Hệ Thống: CSDL chưa được cập nhật cột mới (adjustment_data...). \nVui lòng chạy script SQL trong services/dataService.ts`);
+      }
+    }
   },
 
   // Delete a plan

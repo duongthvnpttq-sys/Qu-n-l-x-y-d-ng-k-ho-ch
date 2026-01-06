@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { User, Plan, SystemData } from './types';
 import { dataService } from './services/dataService';
@@ -210,7 +209,12 @@ const App: React.FC = () => {
       )}
       {activeTab === 'plan' && (
         <>
-          <WeeklyPlan currentUser={currentUser} plans={systemData.plans} onAddPlan={handleAddPlan} />
+          <WeeklyPlan 
+            currentUser={currentUser} 
+            plans={systemData.plans} 
+            onAddPlan={handleAddPlan}
+            onUpdatePlan={handleUpdatePlan}
+          />
           {(currentUser.role === 'manager' || currentUser.role === 'admin') && (
              <div className="mt-12 pt-8 border-t border-gray-200">
                <PlanApproval currentUser={currentUser} plans={systemData.plans} onUpdatePlan={handleUpdatePlan} />
