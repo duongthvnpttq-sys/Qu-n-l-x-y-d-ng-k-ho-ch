@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { User, Role } from '../types';
-import { LogOut, LayoutDashboard, Users, Calendar, CheckSquare, Star, FileBarChart, UserCircle, Key, X, Lock } from 'lucide-react';
+import { LogOut, LayoutDashboard, Users, Calendar, CheckSquare, Star, FileBarChart, UserCircle, Key, X, Lock, Sparkles } from 'lucide-react';
 
 interface LayoutProps {
   currentUser: User;
@@ -18,6 +18,7 @@ const TABS: Record<string, { label: string; icon: React.ReactNode; roles: Role[]
   plan: { label: 'Kế Hoạch', icon: <Calendar size={18} />, roles: ['admin', 'manager', 'employee'] },
   daily: { label: 'Báo Cáo', icon: <CheckSquare size={18} />, roles: ['admin', 'manager', 'employee'] },
   rating: { label: 'Đánh Giá', icon: <Star size={18} />, roles: ['admin', 'manager', 'employee'] },
+  analysis: { label: 'Trợ Lý AI', icon: <Sparkles size={18} />, roles: ['admin', 'manager', 'employee'] }, // New Tab
   summary: { label: 'Tổng Hợp', icon: <FileBarChart size={18} />, roles: ['admin', 'manager'] }
 };
 

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { User, Plan, SystemData } from './types';
 import { dataService } from './services/dataService';
@@ -10,6 +11,7 @@ import { PlanApproval } from './components/PlanApproval';
 import { DailyReport } from './components/DailyReport';
 import { RatingEvaluation } from './components/RatingEvaluation';
 import { SummaryExport } from './components/SummaryExport';
+import { AIAnalysis } from './components/AIAnalysis';
 import { AlertTriangle } from 'lucide-react';
 import bcrypt from 'bcryptjs';
 
@@ -224,6 +226,7 @@ const App: React.FC = () => {
       )}
       {activeTab === 'daily' && <DailyReport currentUser={currentUser} plans={systemData.plans} onUpdatePlan={handleUpdatePlan} />}
       {activeTab === 'rating' && <RatingEvaluation currentUser={currentUser} plans={systemData.plans} onUpdatePlan={handleUpdatePlan} />}
+      {activeTab === 'analysis' && <AIAnalysis currentUser={currentUser} users={systemData.users} plans={systemData.plans} />}
       {activeTab === 'summary' && <SummaryExport users={systemData.users} plans={systemData.plans} />}
     </Layout>
   );
