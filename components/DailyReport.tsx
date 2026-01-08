@@ -152,12 +152,12 @@ export const DailyReport: React.FC<DailyReportProps> = ({ currentUser, plans, on
                     />
                   </div>
                   <div>
-                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5 ml-1">Khó khăn / Ghi chú</label>
+                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5 ml-1">Nội dung công việc khác, đề xuất triển khai nếu có</label>
                      <textarea
                        className={`${inputLightStyle} h-32 resize-none`}
                        value={reportData.challenges}
                        onChange={e => setReportData({...reportData, challenges: e.target.value})}
-                       placeholder="Ghi lại các vướng mắc trong quá trình triển khai..."
+                       placeholder="Ghi lại nội dung công việc khác hoặc đề xuất..."
                      />
                   </div>
                 </div>
