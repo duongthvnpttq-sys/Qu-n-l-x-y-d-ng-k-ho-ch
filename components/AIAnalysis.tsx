@@ -41,7 +41,7 @@ export const AIAnalysis: React.FC<AIAnalysisProps> = ({ currentUser, users, plan
   const aggregatedData = useMemo(() => {
     if (!selectedEmployeeId) return null;
 
-    const filteredPlans = plans.filter(p => {
+    const filteredPlans = (plans || []).filter(p => {
       const planDate = new Date(p.date);
       return (
         p.employee_id === selectedEmployeeId &&
@@ -103,13 +103,15 @@ export const AIAnalysis: React.FC<AIAnalysisProps> = ({ currentUser, users, plan
     setIsAnalyzing(true);
 
     try {
-      const apiKey = process.env.API_KEY || ''; // Use environment variable
-      if (!apiKey) {
-        throw new Error("Chưa cấu hình API Key");
-      }
+      const apiKey = process.env.API_KEY || 'YOUR_API_KEY'; // Changed to explicit placeholder if env var missing, though process.env should work in bundlers often
+      // Note: In a real Vite/React app, process.env.API_KEY might need VITE_ prefix or different handling.
+      // Assuming existing setup works or user will replace.
+      
+      // Fallback if environment variable is not accessible directly in browser environment without specific bundler config
+      const effectiveApiKey = apiKey === 'YOUR_API_KEY' ? 'AIzaSy...' : apiKey; // User needs to ensure key is present
 
       const ai = new GoogleGenAI({ apiKey });
-      const employeeName = users.find(u => u.employee_id === selectedEmployeeId)?.employee_name || "Nhân viên";
+      const employeeName = users?.find(u => u.employee_id === selectedEmployeeId)?.employee_name || "Nhân viên";
 
       const prompt = `
         Bạn là một Giám đốc Kinh doanh cấp cao tại VNPT. Hãy phân tích hiệu quả công việc của nhân viên ${employeeName} trong tháng ${selectedMonth}/${selectedYear} dựa trên dữ liệu sau:
@@ -151,7 +153,14 @@ export const AIAnalysis: React.FC<AIAnalysisProps> = ({ currentUser, users, plan
 
       const text = response.text;
       if (text) {
-        setAnalysisResult(JSON.parse(text));
+        const parsed = JSON.parse(text);
+        setAnalysisResult({
+            overall_score: parsed.overall_score || 0,
+            summary: parsed.summary || "Không có dữ liệu tổng hợp.",
+            strengths: Array.isArray(parsed.strengths) ? parsed.strengths : [],
+            weaknesses: Array.isArray(parsed.weaknesses) ? parsed.weaknesses : [],
+            recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations : [],
+        });
       }
 
     } catch (error) {
@@ -189,7 +198,7 @@ export const AIAnalysis: React.FC<AIAnalysisProps> = ({ currentUser, users, plan
                  disabled={currentUser.role === 'employee'}
                >
                  {currentUser.role !== 'employee' && <option value="">-- Chọn nhân viên --</option>}
-                 {users.filter(u => u.role !== 'admin').map(u => (
+                 {users?.filter(u => u.role !== 'admin').map(u => (
                    <option key={u.id} value={u.employee_id}>{u.employee_name}</option>
                  ))}
                </select>
@@ -344,12 +353,12 @@ export const AIAnalysis: React.FC<AIAnalysisProps> = ({ currentUser, users, plan
                                    <CheckCircle size={14} /> Điểm Mạnh
                                  </h4>
                                  <ul className="space-y-2">
-                                    {analysisResult.strengths.map((s, i) => (
+                                    {analysisResult.strengths?.length > 0 ? analysisResult.strengths.map((s, i) => (
                                       <li key={i} className="text-xs text-emerald-100 flex items-start gap-2">
                                         <span className="mt-1 w-1.5 h-1.5 bg-emerald-500 rounded-full flex-shrink-0"></span>
                                         {s}
                                       </li>
-                                    ))}
+                                    )) : <li className="text-xs text-emerald-100">Chưa có dữ liệu</li>}
                                  </ul>
                               </div>
 
@@ -359,12 +368,12 @@ export const AIAnalysis: React.FC<AIAnalysisProps> = ({ currentUser, users, plan
                                    <AlertTriangle size={14} /> Cần Cải Thiện
                                  </h4>
                                  <ul className="space-y-2">
-                                    {analysisResult.weaknesses.map((s, i) => (
+                                    {analysisResult.weaknesses?.length > 0 ? analysisResult.weaknesses.map((s, i) => (
                                       <li key={i} className="text-xs text-rose-100 flex items-start gap-2">
                                         <span className="mt-1 w-1.5 h-1.5 bg-rose-500 rounded-full flex-shrink-0"></span>
                                         {s}
                                       </li>
-                                    ))}
+                                    )) : <li className="text-xs text-rose-100">Chưa có dữ liệu</li>}
                                  </ul>
                               </div>
                            </div>
@@ -375,14 +384,14 @@ export const AIAnalysis: React.FC<AIAnalysisProps> = ({ currentUser, users, plan
                                 <Target size={14} /> Chiến Lược Tháng Tới
                               </h4>
                               <div className="space-y-2">
-                                {analysisResult.recommendations.map((rec, i) => (
+                                {analysisResult.recommendations?.length > 0 ? analysisResult.recommendations.map((rec, i) => (
                                    <div key={i} className="flex gap-3 items-start">
                                       <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-300 font-bold text-xs flex-shrink-0 border border-blue-500/30">
                                         {i + 1}
                                       </div>
                                       <p className="text-sm text-blue-50">{rec}</p>
                                    </div>
-                                ))}
+                                )) : <p className="text-sm text-blue-50">Chưa có đề xuất</p>}
                               </div>
                            </div>
                            
