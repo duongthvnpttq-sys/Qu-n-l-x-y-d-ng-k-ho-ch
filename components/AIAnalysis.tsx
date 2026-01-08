@@ -102,11 +102,9 @@ export const AIAnalysis: React.FC<AIAnalysisProps> = ({ currentUser, users, plan
     setIsAnalyzing(true);
 
     try {
-      const apiKey = process.env.API_KEY;
-      if (!apiKey) {
-        throw new Error("Chưa cấu hình API Key (process.env.API_KEY)");
-      }
-
+      // Sử dụng key do người dùng cung cấp
+      const apiKey = "AIzaSyBlaHmRltP9fxdO016S81W9jwkhjcmbkes";
+      
       const ai = new GoogleGenAI({ apiKey });
       const employeeName = (users || []).find(u => u.employee_id === selectedEmployeeId)?.employee_name || "Nhân viên";
 
@@ -162,7 +160,7 @@ export const AIAnalysis: React.FC<AIAnalysisProps> = ({ currentUser, users, plan
 
     } catch (error) {
       console.error("AI Error:", error);
-      alert("Không thể phân tích lúc này. Vui lòng kiểm tra API Key hoặc thử lại sau.");
+      alert("Lỗi khi kết nối AI: " + (error instanceof Error ? error.message : "Vui lòng thử lại sau"));
     } finally {
       setIsAnalyzing(false);
     }
