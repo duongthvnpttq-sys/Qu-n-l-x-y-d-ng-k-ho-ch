@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { User, Plan } from '../types';
 import { GoogleGenAI, Type } from "@google/genai";
@@ -8,7 +7,7 @@ import {
 } from 'lucide-react';
 import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, 
-  ResponsiveContainer, Tooltip, Legend
+  ResponsiveContainer, Tooltip
 } from 'recharts';
 
 interface AIAnalysisProps {
@@ -93,7 +92,7 @@ export const AIAnalysis: React.FC<AIAnalysisProps> = ({ currentUser, users, plan
       { subject: 'Fiber', A: normalize(aggregatedData.fiber_target, aggregatedData.fiber_result), fullMark: 100, actual: aggregatedData.fiber_result, target: aggregatedData.fiber_target },
       { subject: 'MyTV', A: normalize(aggregatedData.mytv_target, aggregatedData.mytv_result), fullMark: 100, actual: aggregatedData.mytv_result, target: aggregatedData.mytv_target },
       { subject: 'CNTT', A: normalize(aggregatedData.cntt_target, aggregatedData.cntt_result), fullMark: 100, actual: aggregatedData.cntt_result, target: aggregatedData.cntt_target },
-      { subject: 'Doanh Thu', A: normalize(aggregatedData.revenue_target, aggregatedData.revenue_result), fullMark: 100, actual: aggregatedData.revenue_result, target: aggregatedData.revenue_target },
+      { subject: 'Doanh Thu', A: normalize(aggregatedData.revenue_target, aggregatedData.revenue_result), fullMark: 100, actual: aggregatedData.revenue_result, target: aggregatedData.revenue_target, isRevenue: true },
     ];
   }, [aggregatedData]);
 
@@ -103,15 +102,13 @@ export const AIAnalysis: React.FC<AIAnalysisProps> = ({ currentUser, users, plan
     setIsAnalyzing(true);
 
     try {
-      const apiKey = process.env.API_KEY || 'YOUR_API_KEY'; // Changed to explicit placeholder if env var missing, though process.env should work in bundlers often
-      // Note: In a real Vite/React app, process.env.API_KEY might need VITE_ prefix or different handling.
-      // Assuming existing setup works or user will replace.
-      
-      // Fallback if environment variable is not accessible directly in browser environment without specific bundler config
-      const effectiveApiKey = apiKey === 'YOUR_API_KEY' ? 'AIzaSy...' : apiKey; // User needs to ensure key is present
+      const apiKey = process.env.API_KEY;
+      if (!apiKey) {
+        throw new Error("Chưa cấu hình API Key (process.env.API_KEY)");
+      }
 
       const ai = new GoogleGenAI({ apiKey });
-      const employeeName = users?.find(u => u.employee_id === selectedEmployeeId)?.employee_name || "Nhân viên";
+      const employeeName = (users || []).find(u => u.employee_id === selectedEmployeeId)?.employee_name || "Nhân viên";
 
       const prompt = `
         Bạn là một Giám đốc Kinh doanh cấp cao tại VNPT. Hãy phân tích hiệu quả công việc của nhân viên ${employeeName} trong tháng ${selectedMonth}/${selectedYear} dựa trên dữ liệu sau:
@@ -198,7 +195,7 @@ export const AIAnalysis: React.FC<AIAnalysisProps> = ({ currentUser, users, plan
                  disabled={currentUser.role === 'employee'}
                >
                  {currentUser.role !== 'employee' && <option value="">-- Chọn nhân viên --</option>}
-                 {users?.filter(u => u.role !== 'admin').map(u => (
+                 {(users || []).filter(u => u.role !== 'admin').map(u => (
                    <option key={u.id} value={u.employee_id}>{u.employee_name}</option>
                  ))}
                </select>
